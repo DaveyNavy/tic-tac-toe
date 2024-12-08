@@ -5,3 +5,7 @@
     width: 20rem;
     height: 20rem;
 }
+
+.container > * {
+    font-size: 3rem;
+}
