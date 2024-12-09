@@ -7,6 +7,54 @@ let player2 = "Player 2";
 const player1Name = document.querySelector(".player1-name");
 const player2Name = document.querySelector(".player2-name");
 
+class Player {
+    playerMark;
+    score = 0;
+    playerName;
+    scoreText; 
+
+    constructor(mark, name, scoreText) {
+        this.playerMark = mark;
+        this.playerName = name;
+        this.scoreText = scoreText;
+    }
+
+    makeMove = (i, j) => {
+        if (GameBoard.placeMark(this.playerMark, i, j)) {
+            Display.renderGameBoard();
+            currGame.togglePlayer();
+        } else {
+            alert("Illegal");
+            return;
+        }
+        if (GameBoard.win() != null) {
+            if (GameBoard.win() == 'X') {
+                results.textContent = player1 + " Wins!";
+            } else if (GameBoard.win() == 'O') {
+                results.textContent = player2 + " Wins!";
+            } else {
+                results.textContent = "Tie!";
+            }
+            if (GameBoard.win() != "Tie") {
+                this.score++;
+                this.scoreText.textContent = this.playerName + ": " + this.score;
+            }
+        }
+    }
+
+    setScore = (newScore) => {
+        this.score = newScore;
+        this.scoreText.textContent = this.playerName + ": " + this.score;
+    }
+
+    setName = (newName) => {
+        this.playerName = newName;
+    }
+}
+
+let X = new Player('X', player1, player1Name);
+let O = new Player('O', player2, player2Name);
+
 form.addEventListener("submit", (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -23,12 +71,13 @@ form.addEventListener("submit", (e) => {
 })
 
 const startButton = document.querySelector(".start");
-let X = makePlayer('X', player1, player1Name);
-let O = makePlayer('O', player2, player2Name);
+let currGame;
 startButton.addEventListener("click", () => {
-    gameBoard.restart();
-    currGame = playGame(X, O);
-    display.renderGameboard();
+    GameBoard.restart();
+    currGame = new PlayGame(X, O);
+    console.log(X);
+    console.log(currGame);
+    Display.renderGameBoard();
 })
 
 const resetScoresButton = document.querySelector(".resetScores");
@@ -39,58 +88,64 @@ resetScoresButton.addEventListener("click", () => {
 
 const results = document.querySelector(".result");
 
-const gameBoard = (function () {
-    let board = [['.', '.', '.'], ['.', '.', '.'], ['.', '.', '.']];
-
-    const getBoard = () => {
-        return board;
+class GameBoard {
+    board;
+    lockBoard;
+    constructor () {
+        this.board = [['.', '.', '.'], ['.', '.', '.'], ['.', '.', '.']];
+        this.lockBoard = false;
     }
 
-    const placeMark = (mark, i, j) => {
-        if (board[i][j] != '.') return false;
-        board[i][j] = mark;
+    static getBoard = () => {
+        return this.board;
+    }
+
+    static placeMark = (mark, i, j) => {
+        if (this.board[i][j] != '.' || this.lockBoard) return false;
+        this.board[i][j] = mark;
         return true;
     }
 
-    const win = () => {
+    static win = () => {
+        this.lockBoard = true;
         for (let i = 0; i < 3; i++) {
-            if (board[i][0] != '.' && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {
-                return board[i][0];
+            if (this.board[i][0] != '.' && this.board[i][0] == this.board[i][1] && this.board[i][1] == this.board[i][2]) {
+                return this.board[i][0];
             }
-            if (board[0][i] != '.' && board[0][i] == board[1][i] && board[1][i] == board[2][i]) {
-                return board[0][i];
+            if (this.board[0][i] != '.' && this.board[0][i] == this.board[1][i] && this.board[1][i] == this.board[2][i]) {
+                return this.board[0][i];
             }
         }
-        if (board[0][0] != '.' && board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
-            return board[0][0];
+        if (this.board[0][0] != '.' && this.board[0][0] == this.board[1][1] && this.board[1][1] == this.board[2][2]) {
+            return this.board[0][0];
         }
-        if (board[0][2] != '.' && board[0][2] == board[1][1] && board[1][1] == board[2][0]) {
-            return board[0][2];
+        if (this.board[0][2] != '.' && this.board[0][2] == this.board[1][1] && this.board[1][1] == this.board[2][0]) {
+            return this.board[0][2];
         }
 
         let openSquares = 9;
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
-                if (board[i][j] != '.') openSquares--;
+                if (this.board[i][j] != '.') openSquares--;
             }
         }
         if (openSquares == 0) return 'Tie';
 
+        this.lockBoard = false;
         return null;
     }
 
-    const restart = () => {
-        board = [['.', '.', '.'], ['.', '.', '.'], ['.', '.', '.']];
+    static restart = () => {
+        this.board = [['.', '.', '.'], ['.', '.', '.'], ['.', '.', '.']];
         results.textContent = "";
+        this.lockBoard = false;
     }
+}
 
-    return { getBoard, placeMark, win, restart };
-})();
-
-const display = (function () {
-    function renderGameboard() {
-        clear();
-        const currBoard = gameBoard.getBoard();
+class Display {
+    static renderGameBoard() {
+        this.clear();
+        const currBoard = GameBoard.getBoard();
         const container = document.querySelector(".container");
         let currIndex = 0;
         currBoard.forEach(element => {
@@ -109,69 +164,35 @@ const display = (function () {
         });
     }
     
-    function clear() {
+    static clear() {
         const container = document.querySelector(".container");
         while (container.firstChild) {
             container.removeChild(container.lastChild);
         }
     }
-
-    return { renderGameboard, clear };
-})();
-
-function makePlayer(mark, name, scoreText) {
-    const playerMark = mark;
-    let score = 0;
-    let playerName = name;
-
-    const makeMove = (i, j) => {
-        if (gameBoard.placeMark(playerMark, i, j)) {
-            display.renderGameboard();
-            currGame.togglePlayer();
-        } else {
-            alert("Illegal");
-        }
-        if (gameBoard.win() != null) {
-            if (gameBoard.win() == 'X') {
-                results.textContent = player1 + " Wins!";
-            } else if (gameBoard.win() == 'O') {
-                results.textContent = player2 + " Wins!";
-            } else {
-                results.textContent = "Tie!";
-            }
-            if (gameBoard.win() != "Tie") {
-                score++;
-                scoreText.textContent = playerName + ": " + score;
-            }
-        }
-    }
-
-    const setScore = (newScore) => {
-        score = newScore;
-        scoreText.textContent = playerName + ": " + score;
-    }
-
-    const setName = (newName) => {
-        playerName = newName;
-    }
-
-    return { playerMark, makeMove, setScore, setName };
 }
 
-function playGame(player1, player2) {
-    let currPlayer = player1;
+class PlayGame {
+    currPlayer;
+    player1;
+    player2;
 
-    const togglePlayer = () => {
-        if (currPlayer == player1) {
-            currPlayer = player2;
+    constructor(player1, player2) {
+        this.player1 = player1;
+        this.player2 = player2;
+        this.currPlayer = player1;
+    }
+
+    togglePlayer = () => {
+        if (this.currPlayer == this.player1) {
+            this.currPlayer = this.player2;
         } else {
-            currPlayer = player1;
+            this.currPlayer = this.player1;
         }
     }
 
-    const getCurrPlayer = () => {
-        return currPlayer;
+    getCurrPlayer = () => {
+        console.log(this.currPlayer);
+        return this.currPlayer;
     }
-
-    return { getCurrPlayer, togglePlayer }
 }
